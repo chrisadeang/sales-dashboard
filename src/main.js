@@ -1,5 +1,5 @@
 import './style.css';
-import { loadData } from './data.js';
+import { loadData, subscribeToChanges } from './data.js';
 
 const THRESHOLD = 90;
 const OUTLETS = ['All', 'Tampines', 'Jurong', 'Orchard'];
@@ -96,6 +96,7 @@ async function init() {
   try {
     DATA = await loadData();
     render();
+    startLive();
   } catch (err) {
     console.error(err);
     showError(err.message || 'Unknown error');
@@ -110,5 +111,43 @@ $('filter').addEventListener('click', e => {
   render();
 });
 $('retry').addEventListener('click', init);
+
+/* ---------- live updates (Supabase Realtime) ---------- */
+let liveStarted = false;
+const stamp = () => new Date().toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+function setLive(state, text) {
+  let el = $('live');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'live';
+    $('range').after(el);
+  }
+  el.className = 'live ' + state;
+  el.innerHTML = '<i></i><span></span>';
+  el.lastChild.textContent = text;
+}
+
+async function refresh() {
+  try {
+    DATA = await loadData();
+    render();
+    setLive('on', 'Live · updated ' + stamp());
+  } catch (err) {
+    setLive('off', 'Reconnecting… ' + (err.message || ''));
+  }
+}
+
+function startLive() {
+  setLive('on', 'Live · updated ' + stamp());
+  if (liveStarted) return;
+  liveStarted = true;
+  subscribeToChanges(refresh, status => {
+    if (status === 'SUBSCRIBED') setLive('on', 'Live · updated ' + stamp());
+    else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status))
+      setLive('off', 'Live updates paused · refreshing every 30s');
+  });
+  setInterval(refresh, 30000); // safety net if realtime is interrupted
+}
 
 init();
