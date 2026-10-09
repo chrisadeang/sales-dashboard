@@ -11,8 +11,11 @@ import { createClient } from '@supabase/supabase-js';
   The anon key is safe in the browser: Row Level Security on the table
   only allows read access.
 */
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Environment variables win. The fallbacks are this project's public URL and
+// read-only (publishable) key, so the app still works if the variables are not set.
+const url = import.meta.env.VITE_SUPABASE_URL || 'https://jqwpbjhmeyqituhczqnm.supabase.co';
+const key =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Cw2s1I4P-I_jl6-OKrkqyg_5jhS6kV2';
 
 const supabase = url && key ? createClient(url, key) : null;
 
