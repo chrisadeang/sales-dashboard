@@ -43,3 +43,19 @@ export async function loadData() {
     returns: Number(r.returns),
   }));
 }
+
+
+/**
+ * Live updates: calls onChange() whenever a row in outlet_weeks is inserted,
+ * updated or deleted, and onStatus(status) as the realtime connection changes
+ * ('SUBSCRIBED', 'CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED').
+ * Returns a function that stops listening.
+ */
+export function subscribeToChanges(onChange, onStatus) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel('outlet_weeks_live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'outlet_weeks' }, () => onChange())
+    .subscribe(status => onStatus(status));
+  return () => supabase.removeChannel(channel);
+}
